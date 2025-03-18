@@ -9,7 +9,7 @@
         android:id="@+id/addButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Добавить элемент"
+        android:text="Добавить"
         android:layout_marginBottom="16dp" />
 
     <co.feip.fefu2025.CustomFlexBoxLayout
