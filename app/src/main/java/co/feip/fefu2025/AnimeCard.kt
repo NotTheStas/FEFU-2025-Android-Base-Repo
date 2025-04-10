@@ -2,7 +2,6 @@ package co.feip.fefu2025
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,21 +28,17 @@ fun AnimeCard(
     imageResId: Int,
     title: String,
     genres: List<String>,
-    colors: List<Int>,
     rating: Float
 ) {
     Card(
         modifier = Modifier
-            .background(ComposeColor.Black)
-            .width(280.dp)
-            .height(450.dp)
+            .fillMaxWidth()
+            .aspectRatio(0.45f)
             .padding(8.dp),
         shape = RoundedCornerShape(12.dp),
-
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-
             modifier = Modifier
                 .background(ComposeColor(230, 230, 250))
                 .fillMaxSize()
@@ -53,16 +48,14 @@ fun AnimeCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
+                    .weight(0.7f)
                     .clip(RoundedCornerShape(12.dp))
             ) {
                 Image(
                     painter = painterResource(id = imageResId),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp))
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 Row(
@@ -97,7 +90,8 @@ fun AnimeCard(
                 text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = ComposeColor.Black
+                color = ComposeColor.Black,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -113,13 +107,15 @@ fun AnimeCard(
                         genres.forEachIndexed { index, genre ->
                             val animeView = AnimeGenreView(flexBoxLayout.context).apply {
                                 setGenreName(genre)
-                                setBackgroundColor(colors[index])
+                                setBackgroundColor(Color.LTGRAY)
                             }
                             flexBoxLayout.addView(animeView)
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.4f)
             )
         }
     }
@@ -129,12 +125,10 @@ fun AnimeCard(
 @Composable
 fun AnimeCardPreview() {
     val genres = listOf("Драма", "Фантастика", "Триллер")
-    val colors = listOf(Color.LTGRAY, Color.LTGRAY, Color.LTGRAY)
     AnimeCard(
         imageResId = R.drawable.test,
         title = "Врата Штейна",
         genres = genres,
-        colors = colors,
         rating = 9.07f
     )
 }

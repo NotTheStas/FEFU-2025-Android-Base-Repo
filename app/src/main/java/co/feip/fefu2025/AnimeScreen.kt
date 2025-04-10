@@ -6,11 +6,11 @@ import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,7 +34,8 @@ fun AnimeScreen(
     description: String,
     rating: Float,
     releaseYear: Int,
-    episodeCount: Int
+    episodeCount: Int,
+    animeCatalogTest: List<AnimeTest>
 ) {
     Column(
         modifier = Modifier
@@ -127,8 +128,45 @@ fun AnimeScreen(
             fontSize = 16.sp,
             color = ComposeColor.Black
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Может понравиться:",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = ComposeColor.Black
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(start = 4.dp, end = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(animeCatalogTest) { anime ->
+                AnimeCard(
+                    title = anime.title,
+                    rating = anime.rating,
+                    genres = anime.genres,
+                    imageResId = anime.image
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(48.dp))
     }
 }
+
+data class AnimeTest(
+    val title: String,
+    val rating: Float,
+    val genres: List<String>,
+    val image: Int
+)
 
 @Preview(showBackground = true)
 @Composable
@@ -144,6 +182,18 @@ fun AnimeScreenPreview() {
                 "Вскоре «сотрудники лаборатории» сталкиваются с чередой загадочных инцидентов, которые приводят к открытию, изменившему правила игры: «мобиловолновка» может отправлять электронные письма в прошлое и таким образом изменять историю.",
         rating = 9.07f,
         releaseYear = 2011,
-        episodeCount = 24
+        episodeCount = 24,
+        animeCatalogTest = listOf(
+            AnimeTest("Комбатанты будут высланы!", 7.1f, listOf("Экшен", "Комедия", "Фэнтези"), R.drawable.sentouin_haken_shimasu),
+            AnimeTest("Атака титанов", 8.5f, listOf("Экшен", "Сёнен", "Драма"), R.drawable.shingeki_no_kyojin),
+            AnimeTest("Семья шпиона", 8.4f, listOf("Экшен", "Сёнен", "Комедия"), R.drawable.spy_x_family),
+            AnimeTest("Восхождение героя щита", 7.9f, listOf("Экшен", "Приключения", "Драма"), R.drawable.tate_no_yuusha_no_nariagari),
+            AnimeTest("Твоё имя", 8.8f, listOf("Драма"), R.drawable.kimi_no_na_wa),
+            AnimeTest("Доктор Стоун", 8.2f, listOf("Сёнен", "Приключения", "Комедия"), R.drawable.dr_stone),
+            AnimeTest("Поднятие уровня в одиночку", 8.2f, listOf("Экшен", "Приключения", "Фэнтези"), R.drawable.ore_dake_level_up_na_ken),
+            AnimeTest("Тяжкий труд в подземелье", 7.2f, listOf("Комедия", "Фентези"), R.drawable.meikyuu_black_company),
+            AnimeTest("Акудама Драйв", 7.9f, listOf("Экшен", "Фантастика", "Триллер"), R.drawable.akudama_drive),
+            AnimeTest("Подземелье Вкусностей", 8.7f, listOf("Сэйнэн", "Комедия", "Фэнтези"), R.drawable.dungeon_meshi)
+        )
     )
 }
