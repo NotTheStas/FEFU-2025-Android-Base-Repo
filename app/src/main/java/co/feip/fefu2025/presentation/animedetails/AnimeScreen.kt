@@ -1,4 +1,4 @@
-package co.feip.fefu2025
+package co.feip.fefu2025.presentation.animedetails
 
 import android.content.Context
 import android.graphics.Color
@@ -24,6 +24,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+
+import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
+import co.feip.fefu2025.presentation.elements.AnimeGenreView
+import co.feip.fefu2025.presentation.elements.AnimeCard
+import co.feip.fefu2025.R
 
 @Composable
 fun AnimeScreen(
