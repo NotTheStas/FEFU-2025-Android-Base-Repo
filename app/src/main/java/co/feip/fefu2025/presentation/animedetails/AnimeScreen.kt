@@ -28,7 +28,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
 import co.feip.fefu2025.presentation.elements.AnimeGenreView
 import co.feip.fefu2025.presentation.elements.AnimeCard
-import co.feip.fefu2025.R
+
+import co.feip.fefu2025.data.repository.AnimeRepositoryImpl
+import co.feip.fefu2025.domain.usecase.GetAnimeDetailsUseCase
+import co.feip.fefu2025.domain.usecase.GetAnimeListUseCase
+import kotlinx.coroutines.runBlocking
 
 @Composable
 fun AnimeScreen(
@@ -57,7 +61,7 @@ fun AnimeScreen(
         ) {
             Image(
                 painter = painterResource(id = imageResId),
-                contentDescription = null,
+                contentDescription = title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -109,7 +113,9 @@ fun AnimeScreen(
                     genres.forEachIndexed { index, genre ->
                         val animeView = AnimeGenreView(flexBoxLayout.context).apply {
                             setGenreName(genre)
-                            setBackgroundColor(colors[index])
+                            val colorIndex = if (index < colors.size) index else 0
+                            val color = colors.getOrElse(colorIndex) { Color.LTGRAY }
+                            setBackgroundColor(color)
                         }
                         flexBoxLayout.addView(animeView)
                     }
@@ -124,7 +130,7 @@ fun AnimeScreen(
             text = "Описание",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = ComposeColor.Black
+            color = ComposeColor.Black,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -176,29 +182,48 @@ data class AnimeTest(
 @Preview(showBackground = true)
 @Composable
 fun AnimeScreenPreview() {
-    val genres = listOf("Драма", "Фантастика", "Триллер", "Психологическое")
-    val colors = listOf(Color.LTGRAY, Color.LTGRAY, Color.LTGRAY, Color.LTGRAY)
-    AnimeScreen(
-        imageResId = R.drawable.test,
-        title = "Врата Штейна",
-        genres = genres,
-        colors = colors,
-        description = "Сняв в Акихабаре квартиру, самопровозглашённый сумасшедший учёный Окабэ Ринтаро устроил там «лабораторию» и в компании своей подруги детства Сины Маюри и хакера-отаку Хасиды Итару изобретает «гаджеты будущего». Троица отлично проводит время вместе, работая над совместным проектом — «мобиловолновкой», которой можно управлять с помощью текстовых сообщений.\n" +
-                "Вскоре «сотрудники лаборатории» сталкиваются с чередой загадочных инцидентов, которые приводят к открытию, изменившему правила игры: «мобиловолновка» может отправлять электронные письма в прошлое и таким образом изменять историю.",
-        rating = 9.07f,
-        releaseYear = 2011,
-        episodeCount = 24,
-        animeCatalogTest = listOf(
-            AnimeTest("Комбатанты будут высланы!", 7.1f, listOf("Экшен", "Комедия", "Фэнтези"), R.drawable.sentouin_haken_shimasu),
-            AnimeTest("Атака титанов", 8.5f, listOf("Экшен", "Сёнен", "Драма"), R.drawable.shingeki_no_kyojin),
-            AnimeTest("Семья шпиона", 8.4f, listOf("Экшен", "Сёнен", "Комедия"), R.drawable.spy_x_family),
-            AnimeTest("Восхождение героя щита", 7.9f, listOf("Экшен", "Приключения", "Драма"), R.drawable.tate_no_yuusha_no_nariagari),
-            AnimeTest("Твоё имя", 8.8f, listOf("Драма"), R.drawable.kimi_no_na_wa),
-            AnimeTest("Доктор Стоун", 8.2f, listOf("Сёнен", "Приключения", "Комедия"), R.drawable.dr_stone),
-            AnimeTest("Поднятие уровня в одиночку", 8.2f, listOf("Экшен", "Приключения", "Фэнтези"), R.drawable.ore_dake_level_up_na_ken),
-            AnimeTest("Тяжкий труд в подземелье", 7.2f, listOf("Комедия", "Фентези"), R.drawable.meikyuu_black_company),
-            AnimeTest("Акудама Драйв", 7.9f, listOf("Экшен", "Фантастика", "Триллер"), R.drawable.akudama_drive),
-            AnimeTest("Подземелье Вкусностей", 8.7f, listOf("Сэйнэн", "Комедия", "Фэнтези"), R.drawable.dungeon_meshi)
+    val animeIdToShow = 1
+
+    val repository = AnimeRepositoryImpl()
+    val getAnimeDetailsUseCase = GetAnimeDetailsUseCase(repository)
+    val getAnimeListUseCase = GetAnimeListUseCase(repository)
+
+    val (animeDetails, recommendationsDomain) = runBlocking {
+        val details = getAnimeDetailsUseCase(animeIdToShow)
+        val allAnime = getAnimeListUseCase()
+        val recs = allAnime.filter { it.id != animeIdToShow }
+        details to recs
+    }
+
+    if (animeDetails == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Аниме с ID $animeIdToShow не найдено в репозитории")
+        }
+        return
+    }
+
+    val recommendationsForPreview = recommendationsDomain.map { domainAnime ->
+        AnimeTest(
+            title = domainAnime.title,
+            rating = domainAnime.rating,
+            genres = domainAnime.genres,
+            image = domainAnime.image
         )
-    )
+    }
+
+    val genreColors = List(animeDetails.genres.size) { Color.LTGRAY }
+
+    MaterialTheme {
+        AnimeScreen(
+            imageResId = animeDetails.image,
+            title = animeDetails.title,
+            genres = animeDetails.genres,
+            colors = genreColors,
+            description = animeDetails.description,
+            rating = animeDetails.rating,
+            releaseYear = animeDetails.year,
+            episodeCount = animeDetails.episodesCount,
+            animeCatalogTest = recommendationsForPreview
+        )
+    }
 }
