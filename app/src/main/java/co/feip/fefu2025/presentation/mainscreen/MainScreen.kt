@@ -1,6 +1,7 @@
 package co.feip.fefu2025.presentation.mainscreen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -15,40 +16,35 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
-
+import co.feip.fefu2025.R
+import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.presentation.elements.AnimeCard
-import co.feip.fefu2025.data.repository.AnimeRepositoryImpl
-import co.feip.fefu2025.domain.usecase.GetAnimeListUseCase
-import kotlinx.coroutines.runBlocking
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnimeHomeScreen(animeCatalog: List<AnimeExample>) {
+fun AnimeHomeScreen(
+    animeList: List<Anime>,
+    onAnimeClick: (Int) -> Unit
+) {
     var searchText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         TextField(
             value = searchText,
             onValueChange = { newText -> searchText = newText },
-            placeholder = {
-                Text(
-                    text = "Найти...",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-            },
+            placeholder = { Text("Найти...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             trailingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Search,
+                    Icons.Default.Search,
                     contentDescription = "Поиск",
-                    tint = Color.Gray
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             modifier = Modifier
@@ -74,47 +70,31 @@ fun AnimeHomeScreen(animeCatalog: List<AnimeExample>) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(animeCatalog) { anime ->
-                AnimeCard(
-                    title = anime.title,
-                    rating = anime.rating,
-                    genres = anime.genres,
-                    imageResId = anime.image
-                )
+            items(animeList, key = { anime -> anime.id }) { anime ->
+                Box(modifier = Modifier.clickable { onAnimeClick(anime.id) }) {
+                    AnimeCard(
+                        title = anime.title,
+                        rating = anime.rating,
+                        genres = anime.genres,
+                        imageResId = anime.image
+                    )
+                }
             }
         }
     }
 }
 
-data class AnimeExample(
-    val title: String,
-    val rating: Float,
-    val genres: List<String>,
-    val image: Int
-)
-
 @Preview(showBackground = true)
 @Composable
 fun PreviewMainScreen() {
-    val repository = AnimeRepositoryImpl()
-    val getAnimeListUseCase = GetAnimeListUseCase(repository)
-
-    val animeListFromUseCase = runBlocking {
-        getAnimeListUseCase()
-    }
-
-    val animeCatalogForPreview = animeListFromUseCase.map { domainAnime ->
-        AnimeExample(
-            title = domainAnime.title,
-            rating = domainAnime.rating,
-            genres = domainAnime.genres,
-            image = domainAnime.image
-        )
-    }
-
+    val sampleAnimeList = listOf(
+        Anime(1, "Комбатанты...", "", listOf("Экшен", "Комедия"), 7.1f, R.drawable.sentouin_haken_shimasu, 2021, 12),
+        Anime(2, "Атака...", "", listOf("Экшен", "Драма"), 8.5f, R.drawable.shingeki_no_kyojin, 2013, 25),
+    )
     MaterialTheme {
         AnimeHomeScreen(
-            animeCatalog = animeCatalogForPreview
+            animeList = sampleAnimeList,
+            onAnimeClick = {}
         )
     }
 }
