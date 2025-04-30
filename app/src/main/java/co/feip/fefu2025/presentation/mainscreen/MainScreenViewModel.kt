@@ -9,22 +9,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class MainViewModel(
-    private val getAnimeListUseCase: GetAnimeListUseCase
-) : ViewModel() {
+class MainViewModel(private val getAnimeListUseCase: GetAnimeListUseCase) : ViewModel() {
 
-    private val _animeListState = MutableStateFlow<List<Anime>>(emptyList())
-    val animeListState: StateFlow<List<Anime>> = _animeListState.asStateFlow()
+    private val _animeList = MutableStateFlow<List<Anime>>(emptyList())
+    val animeList: StateFlow<List<Anime>> = _animeList.asStateFlow()
 
     init {
-        loadAnimeList()
+        fetchAnimeList()
     }
 
-    fun loadAnimeList() {
+    private fun fetchAnimeList() {
         viewModelScope.launch {
-            val animeList = getAnimeListUseCase()
-            _animeListState.value = animeList
-
+            _animeList.value = getAnimeListUseCase()
         }
     }
 }
