@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+
 import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.presentation.elements.AnimeCard
 

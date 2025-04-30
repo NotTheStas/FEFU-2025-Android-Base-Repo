@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.savedstate.SavedStateRegistryOwner
+
 import co.feip.fefu2025.data.repository.AnimeRepositoryImpl
 import co.feip.fefu2025.domain.usecase.GetAnimeDetailsUseCase
 import co.feip.fefu2025.domain.usecase.GetAnimeListUseCase
@@ -32,6 +33,8 @@ import co.feip.fefu2025.presentation.animedetails.AnimeScreen
 import co.feip.fefu2025.presentation.mainscreen.AnimeHomeScreen
 import co.feip.fefu2025.presentation.mainscreen.MainViewModel
 import co.feip.fefu2025.presentation.recommendations.RecommendationsScreen
+import co.feip.fefu2025.presentation.search.SearchViewModel
+import co.feip.fefu2025.presentation.search.SearchScreen
 
 
 class MainViewModelFactory : ViewModelProvider.Factory {
@@ -65,6 +68,15 @@ class AnimeDetailsViewModelFactory(
     }
 }
 
+class SearchViewModelFactory : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        val repository = AnimeRepositoryImpl()
+        val getAnimeListUseCase = GetAnimeListUseCase(repository)
+        return SearchViewModel(getAnimeListUseCase) as T
+    }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,11 +100,15 @@ fun AnimeAppNavigation() {
     NavHost(navController = navController, startDestination = Screen.MainScreen.route) {
         composable(route = Screen.MainScreen.route) {
             val mainViewModel: MainViewModel = viewModel(factory = MainViewModelFactory())
-            val animeListState by mainViewModel.animeList.collectAsState()
+            val uiState by mainViewModel.animeListState.collectAsState()
             AnimeHomeScreen(
-                animeList = animeListState,
+                uiState = uiState,
+                onRetry = { mainViewModel.fetchAnimeList() },
                 onAnimeClick = { animeId ->
                     navController.navigate(Screen.AnimeDetailsScreen.createRoute(animeId))
+                },
+                onSearchClick = {
+                    navController.navigate(Screen.SearchScreen.route)
                 }
             )
         }
@@ -114,12 +130,13 @@ fun AnimeAppNavigation() {
                 defaultArgs = backStackEntry.arguments
             )
             val detailsViewModel: AnimeDetailsViewModel = viewModel(factory = factory)
-            val animeDetailsState by detailsViewModel.animeDetailsState.collectAsState()
+            val detailsUiState by detailsViewModel.animeDetailsState.collectAsState()
             val recommendationsState by detailsViewModel.recommendationsState.collectAsState()
 
             AnimeScreen(
-                anime = animeDetailsState,
+                detailsUiState = detailsUiState,
                 recommendations = recommendationsState,
+                onRetryDetails = { detailsViewModel.loadAnimeDetails() },
                 onRecommendationsHeaderClick = {
                     val currentAnimeId = backStackEntry.arguments?.getInt("animeId")
                     if (currentAnimeId != null) {
@@ -153,6 +170,22 @@ fun AnimeAppNavigation() {
                 }
             )
         }
+        composable(route = Screen.SearchScreen.route) {
+            val searchViewModel: SearchViewModel = viewModel(factory = SearchViewModelFactory())
+            val query by searchViewModel.query.collectAsState()
+            val searchResultsState by searchViewModel.searchResults.collectAsState()
+
+            SearchScreen(
+                query = query,
+                uiState = searchResultsState,
+                onQueryChange = { searchViewModel.updateQuery(it) },
+                onRetry = { searchViewModel.retrySearch() },
+                onAnimeClick = { animeId ->
+                    navController.navigate(Screen.AnimeDetailsScreen.createRoute(animeId))
+                },
+                navController = navController
+            )
+        }
     }
 }
 
@@ -164,4 +197,5 @@ sealed class Screen(val route: String) {
     object RecommendationsScreen : Screen("recommendations/{animeId}") {
         fun createRoute(animeId: Int) = "recommendations/$animeId"
     }
+    object SearchScreen : Screen("search_screen")
 }
