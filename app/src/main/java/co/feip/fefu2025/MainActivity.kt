@@ -5,6 +5,9 @@ import androidx.activity.ComponentActivity
 import android.graphics.Color
 import android.view.View
 
+import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
+import co.feip.fefu2025.presentation.elements.AnimeGenreView
+
 private lateinit var flexBoxLayout: CustomFlexBoxLayout
 
 class MainActivity : ComponentActivity() {
