@@ -3,6 +3,9 @@ package co.feip.fefu2025.data.repository
 import co.feip.fefu2025.R
 import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.domain.repository.AnimeRepository
+import kotlinx.coroutines.delay
+import java.io.IOException
+import kotlin.random.Random
 
 class AnimeRepositoryImpl : AnimeRepository {
 
@@ -126,11 +129,24 @@ class AnimeRepositoryImpl : AnimeRepository {
         )
     )
 
+    private var shouldFailList = false
+    private var shouldFailDetails = false
+
     override suspend fun getAnimeList(): List<Anime> {
+        delay(2000)
+        shouldFailList = !shouldFailList
+        if (shouldFailList) {
+            throw IOException("Не удалось загрузить список аниме. Проверьте подключение.")
+        }
         return animeCatalog
     }
 
     override suspend fun getAnimeById(id: Int): Anime? {
+        delay(1000)
+        shouldFailDetails = !shouldFailDetails
+        if (shouldFailDetails) {
+            throw IOException("Не удалось загрузить детали для аниме ID: $id")
+        }
         return animeCatalog.find { it.id == id }
     }
 }

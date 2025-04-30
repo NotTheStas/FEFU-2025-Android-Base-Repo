@@ -30,9 +30,46 @@ import co.feip.fefu2025.presentation.elements.AnimeGenreView
 import co.feip.fefu2025.presentation.elements.AnimeCard
 import co.feip.fefu2025.R
 import co.feip.fefu2025.domain.model.Anime
+import co.feip.fefu2025.presentation.common.ErrorView
+import co.feip.fefu2025.presentation.common.UiState
 
 @Composable
 fun AnimeScreen(
+    detailsUiState: UiState<Anime>,
+    recommendations: List<Anime>,
+    onRetryDetails: () -> Unit,
+    onRecommendationsHeaderClick: () -> Unit,
+    onRecommendationClick: (Int) -> Unit
+) {
+    when (detailsUiState) {
+        is UiState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        is UiState.Success -> {
+            val anime = detailsUiState.data
+            AnimeScreenContent(
+                anime = anime,
+                recommendations = recommendations,
+                onRecommendationsHeaderClick = onRecommendationsHeaderClick,
+                onRecommendationClick = onRecommendationClick
+            )
+        }
+        is UiState.Error -> {
+            ErrorView(
+                message = detailsUiState.message,
+                onRetry = onRetryDetails
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnimeScreenContent(
     anime: Anime?,
     recommendations: List<Anime>,
     onRecommendationsHeaderClick: () -> Unit,
@@ -182,8 +219,9 @@ fun AnimeScreenPreview() {
 
     MaterialTheme {
         AnimeScreen(
-            anime = sampleAnime,
+            detailsUiState = UiState.Success(sampleAnime),
             recommendations = sampleRecommendations,
+            onRetryDetails = {},
             onRecommendationsHeaderClick = {},
             onRecommendationClick = {}
         )

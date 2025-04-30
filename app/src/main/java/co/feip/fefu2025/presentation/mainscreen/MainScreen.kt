@@ -12,23 +12,26 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
 
 import co.feip.fefu2025.R
 import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.presentation.elements.AnimeCard
+import co.feip.fefu2025.presentation.common.ErrorView
+import co.feip.fefu2025.presentation.common.UiState
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimeHomeScreen(
-    animeList: List<Anime>,
-    onAnimeClick: (Int) -> Unit
+    uiState: UiState<List<Anime>>,
+    onRetry: () -> Unit,
+    onAnimeClick: (Int) -> Unit,
+    onSearchClick: () -> Unit
 ) {
-    var searchText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -36,53 +39,79 @@ fun AnimeHomeScreen(
             .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
-        TextField(
-            value = searchText,
-            onValueChange = { newText -> searchText = newText },
-            placeholder = { Text("Найти...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            trailingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = "Поиск",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
-                .shadow(4.dp, shape = RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color(0xFFF0F0F0),
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            ),
-            singleLine = true
-        )
+                .clickable(onClick = onSearchClick)
+        ) {
+            OutlinedTextField(
+                value = "",
+                onValueChange = { },
+                readOnly = true,
+                placeholder = { Text("Найти...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Поиск",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                ),
+                singleLine = true,
+                enabled = false
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(animeList, key = { anime -> anime.id }) { anime ->
-                Box(modifier = Modifier.clickable { onAnimeClick(anime.id) }) {
-                    AnimeCard(
-                        title = anime.title,
-                        rating = anime.rating,
-                        genres = anime.genres,
-                        imageResId = anime.image
-                    )
+        when (uiState) {
+            is UiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
+            }
+            is UiState.Success -> {
+                val animeList = uiState.data
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(animeList, key = { anime -> anime.id }) { anime ->
+                        Box(modifier = Modifier.clickable { onAnimeClick(anime.id) }) {
+                            AnimeCard(
+                                title = anime.title,
+                                rating = anime.rating,
+                                genres = anime.genres,
+                                imageResId = anime.image
+                            )
+                        }
+                    }
+                }
+            }
+            is UiState.Error -> {
+                ErrorView(message = uiState.message, onRetry = onRetry)
             }
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
@@ -92,9 +121,6 @@ fun PreviewMainScreen() {
         Anime(2, "Атака...", "", listOf("Экшен", "Драма"), 8.5f, R.drawable.shingeki_no_kyojin, 2013, 25),
     )
     MaterialTheme {
-        AnimeHomeScreen(
-            animeList = sampleAnimeList,
-            onAnimeClick = {}
-        )
+        AnimeHomeScreen(uiState = UiState.Success(sampleAnimeList), onRetry = {}, onAnimeClick = {}, onSearchClick = {})
     }
 }
