@@ -1,4 +1,4 @@
-package co.feip.fefu2025
+package co.feip.fefu2025.presentation.mainscreen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,15 +13,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+
+import co.feip.fefu2025.presentation.elements.AnimeCard
+import co.feip.fefu2025.data.repository.AnimeRepositoryImpl
+import co.feip.fefu2025.domain.usecase.GetAnimeListUseCase
+import kotlinx.coroutines.runBlocking
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimeHomeScreen(animeCatalog: List<AnimeExample>) {
-    var searchText by remember { mutableStateOf(TextFieldValue("")) }
+    var searchText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -91,18 +96,25 @@ data class AnimeExample(
 @Preview(showBackground = true)
 @Composable
 fun PreviewMainScreen() {
-    AnimeHomeScreen(
-        animeCatalog = listOf(
-            AnimeExample("Комбатанты будут высланы!", 7.1f, listOf("Экшен", "Комедия", "Фэнтези"), R.drawable.sentouin_haken_shimasu),
-            AnimeExample("Атака титанов", 8.5f, listOf("Экшен", "Сёнен", "Драма"), R.drawable.shingeki_no_kyojin),
-            AnimeExample("Семья шпиона", 8.4f, listOf("Экшен", "Сёнен", "Комедия"), R.drawable.spy_x_family),
-            AnimeExample("Восхождение героя щита", 7.9f, listOf("Экшен", "Приключения", "Драма"), R.drawable.tate_no_yuusha_no_nariagari),
-            AnimeExample("Твоё имя", 8.8f, listOf("Драма"), R.drawable.kimi_no_na_wa),
-            AnimeExample("Доктор Стоун", 8.2f, listOf("Сёнен", "Приключения", "Комедия"), R.drawable.dr_stone),
-            AnimeExample("Поднятие уровня в одиночку", 8.2f, listOf("Экшен", "Приключения", "Фэнтези"), R.drawable.ore_dake_level_up_na_ken),
-            AnimeExample("Тяжкий труд в подземелье", 7.2f, listOf("Комедия", "Фентези"), R.drawable.meikyuu_black_company),
-            AnimeExample("Акудама Драйв", 7.9f, listOf("Экшен", "Фантастика", "Триллер"), R.drawable.akudama_drive),
-            AnimeExample("Подземелье Вкусностей", 8.7f, listOf("Сэйнэн", "Комедия", "Фэнтези"), R.drawable.dungeon_meshi)
+    val repository = AnimeRepositoryImpl()
+    val getAnimeListUseCase = GetAnimeListUseCase(repository)
+
+    val animeListFromUseCase = runBlocking {
+        getAnimeListUseCase()
+    }
+
+    val animeCatalogForPreview = animeListFromUseCase.map { domainAnime ->
+        AnimeExample(
+            title = domainAnime.title,
+            rating = domainAnime.rating,
+            genres = domainAnime.genres,
+            image = domainAnime.image
         )
-    )
+    }
+
+    MaterialTheme {
+        AnimeHomeScreen(
+            animeCatalog = animeCatalogForPreview
+        )
+    }
 }
