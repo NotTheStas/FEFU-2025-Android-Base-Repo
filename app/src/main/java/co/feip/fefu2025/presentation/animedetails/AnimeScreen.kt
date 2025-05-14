@@ -1,9 +1,7 @@
 package co.feip.fefu2025.presentation.animedetails
 
 import android.content.Context
-import android.graphics.Color as AndroidColor
 import android.view.ViewGroup
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,14 +22,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-
-import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
-import co.feip.fefu2025.presentation.elements.AnimeGenreView
-import co.feip.fefu2025.presentation.elements.AnimeCard
 import co.feip.fefu2025.R
 import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.presentation.common.ErrorView
 import co.feip.fefu2025.presentation.common.UiState
+import co.feip.fefu2025.presentation.elements.AnimeCard
+import co.feip.fefu2025.presentation.elements.AnimeGenreView
+import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
+import coil.compose.AsyncImage
 
 @Composable
 fun AnimeScreen(
@@ -51,9 +49,8 @@ fun AnimeScreen(
             }
         }
         is UiState.Success -> {
-            val anime = detailsUiState.data
             AnimeScreenContent(
-                anime = anime,
+                anime = detailsUiState.data,
                 recommendations = recommendations,
                 onRecommendationsHeaderClick = onRecommendationsHeaderClick,
                 onRecommendationClick = onRecommendationClick
@@ -70,18 +67,11 @@ fun AnimeScreen(
 
 @Composable
 private fun AnimeScreenContent(
-    anime: Anime?,
+    anime: Anime,
     recommendations: List<Anime>,
     onRecommendationsHeaderClick: () -> Unit,
     onRecommendationClick: (Int) -> Unit
 ) {
-    if (anime == null) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-
     Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.background)
@@ -91,113 +81,139 @@ private fun AnimeScreenContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(330.dp).clip(RoundedCornerShape(12.dp))) {
-            Image(
-                painter = painterResource(id = anime.image),
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(330.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            val imageModel: Any = anime.imageUrl
+                ?: anime.image.takeIf { it != 0 }
+                ?: R.drawable.test
+
+            AsyncImage(
+                model = imageModel,
                 contentDescription = anime.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                placeholder = painterResource(id = R.drawable.test),
+                error = painterResource(id = R.drawable.test)
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = anime.title,
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(12.dp))
+
         Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+            anime.year?.let { year ->
+                Text(
+                    text = "Год выпуска: $year",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+            anime.episodesCount?.let { episodes ->
+                Text(
+                    text = "Количество эпизодов: $episodes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Text(
-                text = "Год выпуска: ${anime.year}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Количество эпизодов: ${anime.episodesCount}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Рейтинг: ${anime.rating}",
+                text = "Рейтинг: %.1f".format(anime.rating),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        AndroidView(
-            factory = { context: Context ->
-                CustomFlexBoxLayout(context).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                }.also { flexBoxLayout ->
-                    anime.genres.forEach { genre ->
-                        val animeView = AnimeGenreView(flexBoxLayout.context).apply {
-                            setGenreName(genre)
-                            setBackgroundColor(AndroidColor.LTGRAY)
+        if (anime.genres.isNotEmpty()) {
+            AndroidView(
+                factory = { context: Context ->
+                    CustomFlexBoxLayout(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                    }.also { flexBoxLayout ->
+                        anime.genres.forEach { genre ->
+                            val animeView = AnimeGenreView(flexBoxLayout.context).apply {
+                                setGenreName(genre)
+                                setBackgroundColor(0xFF_D3D3D3.toInt())
+                            }
+                            flexBoxLayout.addView(animeView)
                         }
-                        flexBoxLayout.addView(animeView)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        anime.description?.takeIf { it.isNotBlank() }?.let { desc ->
+            Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Описание",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        textIndent = TextIndent(firstLine = 12.sp)
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+
+        if (recommendations.isNotEmpty()) {
+            Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Может понравиться:",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.clickable(onClick = onRecommendationsHeaderClick)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(
+                contentPadding = PaddingValues(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(recommendations, key = { rec -> rec.id }) { recommendedAnime ->
+                    Box(modifier = Modifier
+                        .width(180.dp)
+                        .clickable { onRecommendationClick(recommendedAnime.id) }) {
+                        AnimeCard(
+                            title = recommendedAnime.title,
+                            rating = recommendedAnime.rating,
+                            genres = recommendedAnime.genres,
+                            imageUrl = recommendedAnime.imageUrl,
+                            placeholderResId = R.drawable.test
+                        )
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()){
-            Text(
-                text = "Описание",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = anime.description,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    textIndent = TextIndent(firstLine = 12.sp)
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
         Spacer(modifier = Modifier.height(24.dp))
-
-        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()){
-            Text(
-                text = "Может понравиться:",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.clickable(onClick = onRecommendationsHeaderClick)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        LazyRow(
-            contentPadding = PaddingValues(vertical = 8.dp),
-            modifier = Modifier.fillMaxWidth().height(350.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(recommendations) { recommendedAnime ->
-                Box(modifier = Modifier.clickable { onRecommendationClick(recommendedAnime.id) }) {
-                    AnimeCard(
-                        title = recommendedAnime.title,
-                        rating = recommendedAnime.rating,
-                        genres = recommendedAnime.genres,
-                        imageResId = recommendedAnime.image
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
@@ -205,16 +221,17 @@ fun AnimeScreenPreview() {
     val sampleAnime = Anime(
         id = 1,
         title = "Комбатанты будут высланы!",
-        description = "Описание...",
+        description = "Всегда приходи с пистолетом на поножовщину! Практически подчинив себе весь мир...",
         rating = 7.1f,
         genres = listOf("Экшен", "Комедия", "Фэнтези"),
         image = R.drawable.sentouin_haken_shimasu,
+        imageUrl = null,
         year = 2021,
         episodesCount = 12
     )
     val sampleRecommendations = listOf(
-        Anime(2, "Атака титанов", "", listOf("Экшен", "Драма"), 8.5f, R.drawable.shingeki_no_kyojin, 2013, 25),
-        Anime(3, "Семья шпиона", "", listOf("Экшен", "Комедия"), 8.4f, R.drawable.spy_x_family, 2022, 12),
+        Anime(2, "Атака титанов", "", listOf("Экшен", "Драма"), 8.5f, 0, null, 2013, 25),
+        Anime(3, "Семья шпиона", "", listOf("Экшен", "Комедия"), 8.4f, 0, null, 2022, 12),
     )
 
     MaterialTheme {

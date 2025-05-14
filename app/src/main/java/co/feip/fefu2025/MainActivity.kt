@@ -4,12 +4,15 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
@@ -28,6 +31,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import co.feip.fefu2025.data.repository.AnimeRepositoryImpl
 import co.feip.fefu2025.domain.usecase.GetAnimeDetailsUseCase
 import co.feip.fefu2025.domain.usecase.GetAnimeListUseCase
+import co.feip.fefu2025.domain.usecase.SearchAnimeUseCase
+import co.feip.fefu2025.domain.usecase.GetAnimeRecommendationsUseCase
 import co.feip.fefu2025.presentation.animedetails.AnimeDetailsViewModel
 import co.feip.fefu2025.presentation.animedetails.AnimeScreen
 import co.feip.fefu2025.presentation.mainscreen.AnimeHomeScreen
@@ -59,10 +64,10 @@ class AnimeDetailsViewModelFactory(
     ): T {
         val repository = AnimeRepositoryImpl()
         val getAnimeDetailsUseCase = GetAnimeDetailsUseCase(repository)
-        val getAnimeListUseCase = GetAnimeListUseCase(repository)
+        val getAnimeRecommendationsUseCase = GetAnimeRecommendationsUseCase(repository)
         return AnimeDetailsViewModel(
             getAnimeDetailsUseCase = getAnimeDetailsUseCase,
-            getAnimeListUseCase = getAnimeListUseCase,
+            getAnimeRecommendationsUseCase = getAnimeRecommendationsUseCase,
             savedStateHandle = handle
         ) as T
     }
@@ -72,8 +77,8 @@ class SearchViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val repository = AnimeRepositoryImpl()
-        val getAnimeListUseCase = GetAnimeListUseCase(repository)
-        return SearchViewModel(getAnimeListUseCase) as T
+        val searchAnimeUseCase = SearchAnimeUseCase(repository)
+        return SearchViewModel(searchAnimeUseCase) as T
     }
 }
 
@@ -101,34 +106,30 @@ fun AnimeAppNavigation() {
         composable(route = Screen.MainScreen.route) {
             val mainViewModel: MainViewModel = viewModel(factory = MainViewModelFactory())
             val uiState by mainViewModel.animeListState.collectAsState()
+            val isLoadingNextPage by mainViewModel.isLoadingNextPage.collectAsState()
+            val canLoadMore by mainViewModel.canLoadMore.collectAsState()
+
             AnimeHomeScreen(
                 uiState = uiState,
                 onRetry = { mainViewModel.fetchAnimeList() },
+                onLoadNextPage = { mainViewModel.loadNextPage() },
                 onAnimeClick = { animeId ->
                     navController.navigate(Screen.AnimeDetailsScreen.createRoute(animeId))
                 },
                 onSearchClick = {
                     navController.navigate(Screen.SearchScreen.route)
-                }
+                },
+                isLoadingNextPage = isLoadingNextPage,
+                canLoadMore = canLoadMore
             )
         }
 
         composable(
             route = Screen.AnimeDetailsScreen.route,
-            arguments = listOf(navArgument("animeId") {
-                type = NavType.IntType
-            }),
-            deepLinks = listOf(
-                navDeepLink {
-                    uriPattern = "mysuperapp://anime/{animeId}"
-                    action = Intent.ACTION_VIEW
-                }
-            )
+            arguments = listOf(navArgument("animeId") { type = NavType.IntType }),
+            deepLinks = listOf(navDeepLink { uriPattern = "mysuperapp://anime/{animeId}"; action = Intent.ACTION_VIEW })
         ) { backStackEntry ->
-            val factory = AnimeDetailsViewModelFactory(
-                owner = backStackEntry,
-                defaultArgs = backStackEntry.arguments
-            )
+            val factory = AnimeDetailsViewModelFactory(owner = backStackEntry, defaultArgs = backStackEntry.arguments)
             val detailsViewModel: AnimeDetailsViewModel = viewModel(factory = factory)
             val detailsUiState by detailsViewModel.animeDetailsState.collectAsState()
             val recommendationsState by detailsViewModel.recommendationsState.collectAsState()
@@ -155,25 +156,40 @@ fun AnimeAppNavigation() {
                 type = NavType.IntType
             })
         ) { backStackEntry ->
+            val animeIdForRecommendations = backStackEntry.arguments?.getInt("animeId")
             val factory = AnimeDetailsViewModelFactory(
                 owner = backStackEntry,
                 defaultArgs = backStackEntry.arguments
             )
-            val detailsViewModel: AnimeDetailsViewModel = viewModel(factory = factory)
-            val recommendationsState by detailsViewModel.recommendationsState.collectAsState()
+            val viewModel: AnimeDetailsViewModel = viewModel(factory = factory)
+            val recommendationsState by viewModel.recommendationsState.collectAsState()
 
-            RecommendationsScreen(
-                recommendations = recommendationsState,
-                navController = navController,
-                onAnimeClick = { animeId ->
-                    navController.navigate(Screen.AnimeDetailsScreen.createRoute(animeId))
+            if (animeIdForRecommendations == null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Ошибка: ID аниме для рекомендаций не найден.")
                 }
-            )
+            } else {
+                RecommendationsScreen(
+                    recommendations = recommendationsState,
+                    navController = navController,
+                    onAnimeClick = { clickedAnimeId ->
+                        navController.navigate(Screen.AnimeDetailsScreen.createRoute(clickedAnimeId)) {
+                            popUpTo(Screen.AnimeDetailsScreen.createRoute(animeIdForRecommendations)) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
         }
+
         composable(route = Screen.SearchScreen.route) {
             val searchViewModel: SearchViewModel = viewModel(factory = SearchViewModelFactory())
             val query by searchViewModel.query.collectAsState()
             val searchResultsState by searchViewModel.searchResults.collectAsState()
+            val isLoadingNextPage by searchViewModel.isLoadingNextPage.collectAsState()
+            val canLoadMore by searchViewModel.canLoadMore.collectAsState()
 
             SearchScreen(
                 query = query,
@@ -183,7 +199,10 @@ fun AnimeAppNavigation() {
                 onAnimeClick = { animeId ->
                     navController.navigate(Screen.AnimeDetailsScreen.createRoute(animeId))
                 },
-                navController = navController
+                navController = navController,
+                onLoadNextPage = { searchViewModel.loadNextSearchPage() },
+                isLoadingNextPage = isLoadingNextPage,
+                canLoadMore = canLoadMore
             )
         }
     }
