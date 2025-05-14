@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.domain.usecase.GetAnimeDetailsUseCase
-import co.feip.fefu2025.domain.usecase.GetAnimeListUseCase
+import co.feip.fefu2025.domain.usecase.GetAnimeRecommendationsUseCase
 import co.feip.fefu2025.presentation.common.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,11 +14,11 @@ import kotlinx.coroutines.launch
 
 class AnimeDetailsViewModel(
     private val getAnimeDetailsUseCase: GetAnimeDetailsUseCase,
-    private val getAnimeListUseCase: GetAnimeListUseCase,
+    private val getAnimeRecommendationsUseCase: GetAnimeRecommendationsUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val animeId: Int? = savedStateHandle["animeId"]
+    private val animeId: Int = checkNotNull(savedStateHandle["animeId"])
 
     private val _animeDetailsState = MutableStateFlow<UiState<Anime>>(UiState.Loading)
     val animeDetailsState: StateFlow<UiState<Anime>> = _animeDetailsState.asStateFlow()
@@ -26,17 +26,17 @@ class AnimeDetailsViewModel(
     private val _recommendationsState = MutableStateFlow<List<Anime>>(emptyList())
     val recommendationsState: StateFlow<List<Anime>> = _recommendationsState.asStateFlow()
 
-
     init {
+        loadAnimeDetailsAndRecommendations()
+    }
+
+    private fun loadAnimeDetailsAndRecommendations() {
         loadAnimeDetails()
         loadRecommendations()
     }
 
+
     fun loadAnimeDetails() {
-        if (animeId == null) {
-            _animeDetailsState.value = UiState.Error("Не удалось получить ID аниме")
-            return
-        }
         _animeDetailsState.value = UiState.Loading
         viewModelScope.launch {
             try {
@@ -53,14 +53,12 @@ class AnimeDetailsViewModel(
     }
 
     private fun loadRecommendations() {
-        if (animeId == null) return
         viewModelScope.launch {
             try {
-                val allAnime = getAnimeListUseCase()
-                _recommendationsState.value = allAnime.filter { it.id != animeId }
+                val recommendations = getAnimeRecommendationsUseCase(animeId)
+                _recommendationsState.value = recommendations
             } catch (e: Exception) {
                 _recommendationsState.value = emptyList()
-                println("Error loading recommendations: ${e.message}")
             }
         }
     }

@@ -1,9 +1,7 @@
 package co.feip.fefu2025.presentation.elements
 
 import android.content.Context
-import android.graphics.Color
 import android.view.ViewGroup
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,16 +20,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-
-import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
 import co.feip.fefu2025.R
+import co.feip.fefu2025.ui.layouts.CustomFlexBoxLayout
+import coil.compose.AsyncImage
 
 @Composable
 fun AnimeCard(
-    imageResId: Int,
+    imageUrl: String?,
     title: String,
     genres: List<String>,
-    rating: Float
+    rating: Float,
+    placeholderResId: Int = R.drawable.test
 ) {
     Card(
         modifier = Modifier
@@ -54,11 +53,13 @@ fun AnimeCard(
                     .weight(0.7f)
                     .clip(RoundedCornerShape(12.dp))
             ) {
-                Image(
-                    painter = painterResource(id = imageResId),
-                    contentDescription = null,
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = title,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = painterResource(id = placeholderResId),
+                    error = painterResource(id = placeholderResId)
                 )
 
                 Row(
@@ -99,27 +100,32 @@ fun AnimeCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            AndroidView(
-                factory = { context: Context ->
-                    CustomFlexBoxLayout(context).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                        )
-                    }.also { flexBoxLayout ->
-                        genres.forEachIndexed { index, genre ->
-                            val animeView = AnimeGenreView(flexBoxLayout.context).apply {
-                                setGenreName(genre)
-                                setBackgroundColor(Color.LTGRAY)
+            if (genres.isNotEmpty()) {
+                AndroidView(
+                    factory = { context: Context ->
+                        CustomFlexBoxLayout(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            )
+                        }.also { flexBoxLayout ->
+                            genres.take(2).forEach { genre ->
+                                val animeView = AnimeGenreView(flexBoxLayout.context).apply {
+                                    setGenreName(genre)
+
+                                    setBackgroundColor(0xFF_D3D3D3.toInt())
+                                }
+                                flexBoxLayout.addView(animeView)
                             }
-                            flexBoxLayout.addView(animeView)
                         }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.4f)
-            )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.4f)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(0.35f))
+            }
         }
     }
 }
@@ -129,7 +135,7 @@ fun AnimeCard(
 fun AnimeCardPreview() {
     val genres = listOf("Драма", "Фантастика", "Триллер")
     AnimeCard(
-        imageResId = R.drawable.test,
+        imageUrl = null,
         title = "Врата Штейна",
         genres = genres,
         rating = 9.07f
