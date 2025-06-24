@@ -1,13 +1,17 @@
 package co.feip.fefu2025.data.repository
 
+import co.feip.fefu2025.data.local.FavoriteAnimeDao
 import co.feip.fefu2025.data.mapper.toDomain
+import co.feip.fefu2025.data.mapper.toFavoriteEntity
 import co.feip.fefu2025.data.remote.ApiService
 import co.feip.fefu2025.domain.model.Anime
 import co.feip.fefu2025.domain.repository.AnimeRepository
 import co.feip.fefu2025.domain.model.PaginatedAnimeResult
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.io.IOException
 
-class AnimeRepositoryImpl : AnimeRepository {
+class AnimeRepositoryImpl(private val favoriteAnimeDao: FavoriteAnimeDao) : AnimeRepository {
 
     private val apiService: ApiService by lazy { ApiService.create() }
 
@@ -58,5 +62,28 @@ class AnimeRepositoryImpl : AnimeRepository {
         } catch (e: Exception) {
             throw IOException("Не удалось выполнить поиск по запросу \"$query\": ${e.localizedMessage}", e)
         }
+    }
+
+
+    override fun getFavoriteAnimeList(): Flow<List<Anime>> {
+        return favoriteAnimeDao.getFavoriteAnimeList().map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun addAnimeToFavorites(anime: Anime) {
+        favoriteAnimeDao.addFavorite(anime.toFavoriteEntity())
+    }
+
+    override suspend fun removeAnimeFromFavorites(animeId: Int) {
+        favoriteAnimeDao.removeFavorite(animeId)
+    }
+
+    override fun isAnimeFavorite(animeId: Int): Flow<Boolean> {
+        return favoriteAnimeDao.getFavoriteById(animeId).map { it != null }
+    }
+
+    override suspend fun getFavoriteAnimeById(id: Int): Anime? {
+        return favoriteAnimeDao.getFavoriteByIdOnce(id)?.toDomain()
     }
 }

@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,32 +39,51 @@ import coil.compose.AsyncImage
 fun AnimeScreen(
     detailsUiState: UiState<Anime>,
     recommendations: List<Anime>,
+    isFavorite: Boolean,
     onRetryDetails: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onRecommendationsHeaderClick: () -> Unit,
     onRecommendationClick: (Int) -> Unit
 ) {
-    when (detailsUiState) {
-        is UiState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (detailsUiState) {
+            is UiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        }
-        is UiState.Success -> {
-            AnimeScreenContent(
-                anime = detailsUiState.data,
-                recommendations = recommendations,
-                onRecommendationsHeaderClick = onRecommendationsHeaderClick,
-                onRecommendationClick = onRecommendationClick
-            )
-        }
-        is UiState.Error -> {
-            ErrorView(
-                message = detailsUiState.message,
-                onRetry = onRetryDetails
-            )
+            is UiState.Success -> {
+                AnimeScreenContent(
+                    anime = detailsUiState.data,
+                    recommendations = recommendations,
+                    onRecommendationsHeaderClick = onRecommendationsHeaderClick,
+                    onRecommendationClick = onRecommendationClick
+                )
+
+                FloatingActionButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное",
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+            is UiState.Error -> {
+                ErrorView(
+                    message = detailsUiState.message,
+                    onRetry = onRetryDetails
+                )
+            }
         }
     }
 }
@@ -211,7 +234,7 @@ private fun AnimeScreenContent(
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
@@ -238,7 +261,9 @@ fun AnimeScreenPreview() {
         AnimeScreen(
             detailsUiState = UiState.Success(sampleAnime),
             recommendations = sampleRecommendations,
+            isFavorite = true,
             onRetryDetails = {},
+            onToggleFavorite = {},
             onRecommendationsHeaderClick = {},
             onRecommendationClick = {}
         )
